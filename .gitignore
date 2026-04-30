@@ -1,0 +1,44 @@
+# Go binaries / build outputs
+/bin/
+/dist/
+/out/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test / coverage
+*.test
+*.out
+coverage.*
+coverprofile
+
+# Logs
+*.log
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Env files / secrets (don’t commit)
+.env
+.env.*
+!.env.example
+
+# Local DB / temp files (if ever used)
+*.db
+*.sqlite
+*.sqlite3
+tmp/
+temp/
+
+# Node (just in case tools get added)
+node_modules/
+
+# Docker compose overrides (local)
+docker-compose.override.yml
