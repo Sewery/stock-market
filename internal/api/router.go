@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type RouterConfig struct {
@@ -17,12 +20,34 @@ type RouterConfig struct {
 	LogRequestID bool
 }
 
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "stock_market_http_requests_total",
+			Help: "Total HTTP requests",
+		},
+		[]string{"path", "method", "status"},
+	)
+
+	httpRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "stock_market_http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"path", "method"},
+	)
+)
+
 func NewRouter(h *Handlers, cfg RouterConfig) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
 	r.Use(requestIDMiddleware(cfg.LogRequestID))
 	r.Use(httpLoggerMiddleware(cfg.LogHTTP))
+
+	r.Use(httpMetricsMiddleware())
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	r.POST("/wallets/:wallet_id/stocks/:stock_name", h.TradeOne)
 	r.GET("/wallets/:wallet_id", h.GetWallet)
@@ -97,4 +122,19 @@ func newRequestID() string {
 		return fmt.Sprintf("req-%d", time.Now().UnixNano())
 	}
 	return hex.EncodeToString(b)
+}
+
+func httpMetricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+
+		path := c.FullPath()
+		if path == "" {
+			path = "unknown"
+		}
+
+		httpRequestsTotal.WithLabelValues(path, c.Request.Method, fmt.Sprintf("%d", c.Writer.Status())).Inc()
+		httpRequestDuration.WithLabelValues(path, c.Request.Method).Observe(time.Since(start).Seconds())
+	}
 }
