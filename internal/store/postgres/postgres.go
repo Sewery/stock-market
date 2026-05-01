@@ -64,6 +64,11 @@ func (s *PostgresStore) Migrate(ctx context.Context, migrationsDir string) error
 
 func (s *PostgresStore) SetBankStocks(ctx context.Context, stocks []domain.StockQty) error {
 	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		// Blocking whole table here to prevent concurrent SetBankStocks or TradeOne calls
+		if _, err := tx.Exec(ctx, `LOCK TABLE stocks IN EXCLUSIVE MODE`); err != nil {
+			return err
+		}
+
 		if _, err := tx.Exec(ctx, `DELETE FROM stocks`); err != nil {
 			return err
 		}
