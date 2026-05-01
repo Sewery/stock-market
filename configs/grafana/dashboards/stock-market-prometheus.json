@@ -1,0 +1,103 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Availability (up)",
+      "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
+      "targets": [
+        { "expr": "avg(up{job=\"stock-market\"})", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none", "mappings": [] } },
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 5 }
+    },
+    {
+      "type": "timeseries",
+      "title": "RPS (total)",
+      "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
+      "targets": [
+        { "expr": "sum(rate(stock_market_http_requests_total[1m]))", "legendFormat": "rps", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "gridPos": { "x": 6, "y": 0, "w": 9, "h": 5 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Rate % (5xx)",
+      "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
+      "targets": [
+        {
+          "expr": "100 * (sum(rate(stock_market_http_requests_total{status=~\"5..\"}[1m])) / clamp_min(sum(rate(stock_market_http_requests_total[1m])), 1))",
+          "legendFormat": "5xx %",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "gridPos": { "x": 15, "y": 0, "w": 9, "h": 5 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency p95 / p99 (all HTTP)",
+      "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(stock_market_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(stock_market_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 7 }
+    },
+    {
+      "type": "timeseries",
+      "title": "RPS by Path (top 5)",
+      "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
+      "targets": [
+        {
+          "expr": "topk(5, sum by (path) (rate(stock_market_http_requests_total[1m])))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 7 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Trades: success vs errors",
+      "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
+      "targets": [
+        {
+          "expr": "sum(rate(stock_market_trades_total[1m])) by (type)",
+          "legendFormat": "success {{type}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(stock_market_trade_errors_total[1m])) by (reason)",
+          "legendFormat": "error {{reason}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["stock-market", "prometheus", "stress"],
+  "time": { "from": "now-15m", "to": "now" },
+  "timezone": "",
+  "title": "Stock Market - Stress and Reliability",
+  "version": 1
+}
