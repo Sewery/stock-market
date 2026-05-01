@@ -1,0 +1,195 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP RPS (sum)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS_UID"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(stock_market_http_requests_total[1m]))",
+          "legendFormat": "rps",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Errors (5xx)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS_UID"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(stock_market_http_requests_total{status=~\"5..\"}[1m]))",
+          "legendFormat": "5xx rps",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency p95 (all HTTP)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS_UID"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(stock_market_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency p95 by Path",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS_UID"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, path) (rate(stock_market_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Trades (buy/sell) RPS",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS_UID"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(stock_market_trades_total[1m])) by (type)",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Trade Errors (by reason)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS_UID"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(stock_market_trade_errors_total[1m])) by (reason)",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Bank Set Operations",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS_UID"
+      },
+      "targets": [
+        {
+          "expr": "rate(stock_market_bank_set_total[5m])",
+          "legendFormat": "rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 7 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Wallet Queries (by result)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS_UID"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(stock_market_wallet_queries_total[1m])) by (result)",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 7 }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["stock-market", "prometheus"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Stock Market Overview",
+  "version": 1
+}
