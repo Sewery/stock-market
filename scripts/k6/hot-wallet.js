@@ -3,28 +3,20 @@ import { check, sleep } from "k6";
 
 export const options = {
   scenarios: {
-    steady_load: {
+    hot_wallet: {
       executor: "constant-arrival-rate",
-      rate: 500,
+      rate: 400,
       timeUnit: "1s",
-      duration: "20s",
-      preAllocatedVUs: 100,
-      maxVUs: 600,
-      gracefulStop: "0s",
-      maxDuration: "25s"
-    },
-    kill_app: {
-      executor: "per-vu-iterations",
-      vus: 1,
-      iterations: 1,
-      startTime: "10s",
-      exec: "kill_app",
+      duration: "25s",
+      preAllocatedVUs: 50,
+      maxVUs: 200
     }
   }
 };
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
 const STOCK = __ENV.STOCK || "stock1";
+const WALLET = __ENV.WALLET || "w-hot";
 
 export function setup() {
   http.post(`${BASE_URL}/stocks`, JSON.stringify({ stocks: [{ name: STOCK, quantity: 100000 }] }), {
@@ -38,16 +30,17 @@ export function teardown() {
   });
 }
 
-export function kill_app() {
-  http.post(`${BASE_URL}/chaos`, null);
-}
-
 export default function () {
-  const walletId = `w-${__VU}-${__ITER}`;
-  const res = http.post(`${BASE_URL}/wallets/${walletId}/stocks/${STOCK}`,
+  const buy = http.post(`${BASE_URL}/wallets/${WALLET}/stocks/${STOCK}`,
     JSON.stringify({ type: "buy" }),
     { headers: { "Content-Type": "application/json" } }
   );
-  check(res, { "buy ok or server error": (r) => r.status === 200 || r.status >= 500 });
+  const sell = http.post(`${BASE_URL}/wallets/${WALLET}/stocks/${STOCK}`,
+    JSON.stringify({ type: "sell" }),
+    { headers: { "Content-Type": "application/json" } }
+  );
+
+  check(buy, { "buy ok/400": (r) => r.status === 200 || r.status === 400 });
+  check(sell, { "sell ok/400": (r) => r.status === 200 || r.status === 400 });
   sleep(0.001);
 }

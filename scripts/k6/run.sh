@@ -16,12 +16,12 @@ run_k6() {
     -e K6_PROMETHEUS_RW_SERVER_URL="$PROM_URL" \
     "$IMAGE" run \
     --out experimental-prometheus-rw \
-    - < "scripts/k6/$script" &
+    - < "scripts/k6/$script"
 }
 
 run_k6 read-heavy.js
 run_k6 write-heavy.js
+run_k6 hot-wallet.js
 run_k6 chaos-ha.js
 
-wait
 echo "All k6 tests finished."

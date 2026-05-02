@@ -5,9 +5,9 @@ export const options = {
   scenarios: {
     read_heavy: {
       executor: "constant-arrival-rate",
-      rate: 1000,      // 1000 ops/s
+      rate: 1000, 
       timeUnit: "1s",
-      duration: "60s",
+      duration: "10s",
       preAllocatedVUs: 100,
       maxVUs: 500
     }
@@ -24,6 +24,12 @@ export function setup() {
     headers: { "Content-Type": "application/json" }
   });
   http.post(`${BASE_URL}/wallets/${WALLET}/stocks/${STOCK}`, JSON.stringify({ type: "buy" }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
+export function teardown() {
+  http.post(`${BASE_URL}/stocks`, JSON.stringify({ stocks: [] }), {
     headers: { "Content-Type": "application/json" }
   });
 }

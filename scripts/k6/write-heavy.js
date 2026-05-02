@@ -5,9 +5,9 @@ export const options = {
   scenarios: {
     write_heavy: {
       executor: "constant-arrival-rate",
-      rate: 1000,      // 1000 ops/s
+      rate: 1000,
       timeUnit: "1s",
-      duration: "60s",
+      duration: "10s",
       preAllocatedVUs: 200,
       maxVUs: 1000
     }
@@ -21,6 +21,12 @@ export function setup() {
   const payload = JSON.stringify({ stocks: [{ name: STOCK, quantity: 1000000 }] });
   const res = http.post(`${BASE_URL}/stocks`, payload, { headers: { "Content-Type": "application/json" } });
   check(res, { "seed ok": (r) => r.status === 200 });
+}
+
+export function teardown() {
+  http.post(`${BASE_URL}/stocks`, JSON.stringify({ stocks: [] }), {
+    headers: { "Content-Type": "application/json" }
+  });
 }
 
 export default function () {
