@@ -28,10 +28,29 @@ services:
       - ./:/app
   prometheus:
     image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
     volumes:
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+  loki:
+    image: grafana/loki:2.9.8
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./configs/loki.yml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    volumes:
+      - ./configs/promtail.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
   grafana:
     image: grafana/grafana:latest
     ports:
