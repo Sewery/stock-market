@@ -8,7 +8,7 @@
     {
       "type": "timeseries",
       "title": "Log Volume (per minute)",
-      "datasource": { "type": "loki", "name": "Loki","uid": "stock-market-loki" },
+      "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
           "expr": "count_over_time({container=~\".*app.*\"}[1m])",
@@ -22,10 +22,10 @@
     {
       "type": "timeseries",
       "title": "HTTP Requests (per minute)",
-      "datasource": { "type": "loki", "name": "Loki","uid": "stock-market-loki" },
+      "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
-          "expr": "count_over_time(({container=~\".*app.*\"} | json | msg=\"http_request\") [1m])",
+          "expr": "count_over_time(({container=~\".*app.*\"} | json | msg=\"http_request\")[1m])",
           "legendFormat": "http/min",
           "refId": "A"
         }
@@ -36,10 +36,10 @@
     {
       "type": "timeseries",
       "title": "Slow Requests (latency_ms > 20)",
-      "datasource": { "type": "loki", "name": "Loki","uid": "stock-market-loki" },
+      "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
-          "expr": "count_over_time(({container=~\".*app.*\"} | json | latency_ms > 20) [1m])",
+          "expr": "count_over_time(({container=~\".*app.*\"} | json | latency_ms > 20)[1m])",
           "legendFormat": "slow/min",
           "refId": "A"
         }
@@ -49,11 +49,11 @@
     },
     {
       "type": "timeseries",
-      "title": "Requests by Path (top 5)",
-      "datasource": { "type": "loki", "name": "Loki","uid": "stock-market-loki" },
+      "title": "Requests by Path (all)",
+      "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
-          "expr": "topk(5, sum by (path) (count_over_time(({container=~\".*app.*\"} | json | msg=\"http_request\") [5m])))",
+          "expr": "sum by (path) (count_over_time(({container=~\".*app.*\"} | json | msg=\"http_request\")[1m]))",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -64,7 +64,7 @@
     {
       "type": "logs",
       "title": "Recent HTTP Logs",
-      "datasource": { "type": "loki", "name": "Loki","uid": "stock-market-loki" },
+      "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
           "expr": "{container=~\".*app.*\"} | json | msg=\"http_request\"",
@@ -74,12 +74,12 @@
       "gridPos": { "x": 12, "y": 6, "w": 12, "h": 7 }
     }
   ],
-  "refresh": "10s",
+  "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
   "tags": ["stock-market", "loki", "logs", "stress"],
-  "time": { "from": "now-15m", "to": "now" },
+  "time": { "from": "now-5m", "to": "now" },
   "timezone": "",
   "title": "Stock Market - Logs (Loki)",
-  "version": 1
+  "version": 2
 }

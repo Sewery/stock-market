@@ -27,16 +27,21 @@
     },
     {
       "type": "timeseries",
-      "title": "Error Rate % (5xx)",
+      "title": "Success vs Errors (RPS)",
       "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
       "targets": [
         {
-          "expr": "100 * (sum(rate(stock_market_http_requests_total{status=~\"5..\"}[1m])) / clamp_min(sum(rate(stock_market_http_requests_total[1m])), 1))",
-          "legendFormat": "5xx %",
+          "expr": "sum(rate(stock_market_http_requests_total{status=~\"2..\"}[1m]))",
+          "legendFormat": "success (2xx)",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(stock_market_http_requests_total{status=~\"4..|5..\"}[1m]))",
+          "legendFormat": "errors (4xx+5xx)",
+          "refId": "B"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
       "gridPos": { "x": 15, "y": 0, "w": 9, "h": 5 }
     },
     {
@@ -45,12 +50,12 @@
       "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(stock_market_http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(stock_market_http_request_duration_seconds_bucket[1m])))",
           "legendFormat": "p95",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(stock_market_http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(stock_market_http_request_duration_seconds_bucket[1m])))",
           "legendFormat": "p99",
           "refId": "B"
         }
@@ -60,12 +65,12 @@
     },
     {
       "type": "timeseries",
-      "title": "RPS by Path (top 5)",
+      "title": "RPS by Path (all)",
       "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
       "targets": [
         {
-          "expr": "topk(5, sum by (path) (rate(stock_market_http_requests_total[1m])))",
-          "legendFormat": "{{path}}",
+          "expr": "sum(rate(stock_market_http_requests_total[1m])) by (path, method)",
+          "legendFormat": "{{method}} {{path}}",
           "refId": "A"
         }
       ],
@@ -92,12 +97,12 @@
       "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 }
     }
   ],
-  "refresh": "10s",
+  "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
   "tags": ["stock-market", "prometheus", "stress"],
-  "time": { "from": "now-15m", "to": "now" },
+  "time": { "from": "now-5m", "to": "now" },
   "timezone": "",
   "title": "Stock Market - Stress and Reliability",
-  "version": 1
+  "version": 2
 }
