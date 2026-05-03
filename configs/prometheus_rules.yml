@@ -1,0 +1,36 @@
+groups:
+  - name: stock-market-alerts
+    rules:
+      - alert: StockMarketDown
+        expr: up{job="stock-market"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }} for 1m."
+
+      - alert: High5xxErrorRate
+        expr: |
+          sum(rate(stock_market_http_requests_total{status=~"5.."}[1m]))
+          /
+          sum(rate(stock_market_http_requests_total[1m]))
+          > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx error rate"
+          description: "5xx error rate > 5% for 2 minutes."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(stock_market_http_request_duration_seconds_bucket[1m]))
+          ) > 0.2
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency"
+          description: "p95 latency > 200ms for 30 seconds."
