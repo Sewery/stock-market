@@ -7,6 +7,8 @@ positions:
 
 clients:
   - url: http://loki:3100/loki/api/v1/push
+    external_labels:
+      job: docker
 
 scrape_configs:
   - job_name: docker
@@ -15,12 +17,18 @@ scrape_configs:
         refresh_interval: 5s
 
     relabel_configs:
-      - target_label: job
+      - action: replace
+        target_label: job
         replacement: docker
 
-      - source_labels: [__meta_docker_container_name]
-        regex: ".*app.*"
-        action: keep
+      - action: replace
+        target_label: app
+        replacement: stock-market
 
-      - source_labels: [__meta_docker_container_name]
+      - action: replace
+        source_labels: [__meta_docker_container_name]
         target_label: container
+
+      - action: keep
+        source_labels: [__meta_docker_container_name]
+        regex: ".*app.*"
