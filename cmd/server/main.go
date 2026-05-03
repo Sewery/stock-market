@@ -31,7 +31,7 @@ func main() {
 		LogRequestID: getEnvBool("LOG_REQUEST_ID", true),
 	})
 
-	host := getenvDefault("HOST", "localhost")
+	host := getenvDefault("HOST", "0.0.0.0")
 	port := getenvDefault("PORT", "8080")
 	addr := fmt.Sprintf("%s:%s", host, port)
 
