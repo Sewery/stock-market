@@ -23,6 +23,11 @@ services:
     depends_on:
       - postgres
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
 
   app2:
     build: .
@@ -39,7 +44,11 @@ services:
     depends_on:
       - postgres
     restart: always
-
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
   nginx:
     image: nginx:alpine
     ports:

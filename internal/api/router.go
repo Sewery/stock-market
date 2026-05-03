@@ -66,6 +66,10 @@ func NewRouter(h *Handlers, cfg RouterConfig) *gin.Engine {
 		}()
 	})
 
+	r.GET("/healthz", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
 	return r
 }
 
