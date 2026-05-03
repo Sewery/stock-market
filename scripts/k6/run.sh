@@ -3,7 +3,7 @@
 set -e
 
 NETWORK=stock-market_default
-BASE_URL=http://app:8080
+BASE_URL=http://nginx:8080
 PROM_URL=http://prometheus:9090/api/v1/write
 IMAGE=grafana/k6:latest
 
@@ -21,7 +21,7 @@ run_k6() {
 
 run_k6 read-heavy.js
 run_k6 write-heavy.js
-run_k6 hot-wallet.js
 run_k6 chaos-ha.js
+run_k6 hot-wallet.js
 
 echo "All k6 tests finished."

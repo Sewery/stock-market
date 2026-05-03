@@ -10,7 +10,7 @@
       "title": "Availability (up)",
       "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
       "targets": [
-        { "expr": "avg(up{job=\"stock-market\"})", "refId": "A" }
+        { "expr": "up{job=\"stock-market\"}", "refId": "A","legendFormat": "{{instance}}" }
       ],
       "fieldConfig": { "defaults": { "unit": "none", "mappings": [] } },
       "gridPos": { "x": 0, "y": 0, "w": 6, "h": 5 }
@@ -20,7 +20,12 @@
       "title": "RPS (total)",
       "datasource": { "type": "prometheus", "uid": "PROM_DS_UID" },
       "targets": [
-        { "expr": "sum(rate(stock_market_http_requests_total[1m]))", "legendFormat": "rps", "refId": "A" }
+        { "expr": "sum(rate(stock_market_http_requests_total[1m]))", "legendFormat": "rps", "refId": "A" },
+        {
+          "expr": "sum by (instance) (rate(stock_market_http_requests_total[1m]))",
+          "legendFormat": "{{instance}}",
+          "refId": "B"
+        }       
       ],
       "fieldConfig": { "defaults": { "unit": "reqps" } },
       "gridPos": { "x": 6, "y": 0, "w": 9, "h": 5 }

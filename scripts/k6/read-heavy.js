@@ -4,17 +4,15 @@ import { check, sleep } from "k6";
 export const options = {
   scenarios: {
     read_heavy: {
-      executor: "constant-arrival-rate",
-      rate: 1000, 
-      timeUnit: "1s",
-      duration: "10s",
-      preAllocatedVUs: 100,
-      maxVUs: 500
+      executor: "shared-iterations",
+      iterations: 10000,
+      vus: 200,
+      maxDuration: "20s"
     }
   }
 };
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
+const BASE_URL = __ENV.BASE_URL || "http://nginx:8080";
 const WALLET = __ENV.WALLET || "w-read";
 const STOCK = __ENV.STOCK || "stock1";
 

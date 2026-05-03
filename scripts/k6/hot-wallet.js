@@ -4,17 +4,15 @@ import { check, sleep } from "k6";
 export const options = {
   scenarios: {
     hot_wallet: {
-      executor: "constant-arrival-rate",
-      rate: 400,
-      timeUnit: "1s",
-      duration: "25s",
-      preAllocatedVUs: 50,
-      maxVUs: 200
+      executor: "shared-iterations",
+      iterations: 10000,
+      vus: 200,
+      maxDuration: "30s"
     }
   }
 };
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
+const BASE_URL = __ENV.BASE_URL || "http://nginx:8080";
 const STOCK = __ENV.STOCK || "stock1";
 const WALLET = __ENV.WALLET || "w-hot";
 
@@ -25,9 +23,10 @@ export function setup() {
 }
 
 export function teardown() {
-  http.post(`${BASE_URL}/stocks`, JSON.stringify({ stocks: [] }), {
+  const res = http.post(`${BASE_URL}/stocks`, JSON.stringify({ stocks: [] }), {
     headers: { "Content-Type": "application/json" }
   });
+  check(res, { "teardown ok": (r) => r.status === 200 });
 }
 
 export default function () {

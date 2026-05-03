@@ -11,8 +11,8 @@
       "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
-          "expr": "count_over_time({container=~\".*app.*\"}[1m])",
-          "legendFormat": "logs/min",
+          "expr": "sum by (container) (count_over_time({app=\"stock-market\", container=~\".*app.*\"}[1m]))",
+          "legendFormat": "{{container}}",
           "refId": "A"
         }
       ],
@@ -25,8 +25,8 @@
       "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
-          "expr": "count_over_time(({container=~\".*app.*\"} | json | msg=\"http_request\")[1m])",
-          "legendFormat": "http/min",
+          "expr": "sum by (container) (count_over_time(({app=\"stock-market\", container=~\".*app.*\"} | json | __error__=\"\" | msg=\"http_request\")[1m]))",
+          "legendFormat": "{{container}}",
           "refId": "A"
         }
       ],
@@ -35,12 +35,12 @@
     },
     {
       "type": "timeseries",
-      "title": "Slow Requests (latency_ms > 20)",
+      "title": "Slow Requests (latency_ms > 50)",
       "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
-          "expr": "count_over_time(({container=~\".*app.*\"} | json | latency_ms > 20)[1m])",
-          "legendFormat": "slow/min",
+          "expr": "sum by (container) (rate(({app=\"stock-market\", container=~\".*app.*\"} | json | __error__=\"\" | msg=\"http_request\" | latency_ms > 50)[1m]))",
+          "legendFormat": "{{container}}",
           "refId": "A"
         }
       ],
@@ -48,12 +48,26 @@
       "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 }
     },
     {
+        "type": "stat",
+        "title": "Slow Requests (total in range, > 50ms)",
+        "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
+        "targets": [
+          {
+            "expr": "sum(count_over_time(({app=\"stock-market\", container=~\".*app.*\"} | json | __error__=\"\" | msg=\"http_request\" | latency_ms > 50)[$__range]))",
+            "legendFormat": "total",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": { "defaults": { "unit": "short" } },
+        "gridPos": { "x": 0, "y": 13, "w": 12, "h": 5 }
+    },
+    {
       "type": "timeseries",
       "title": "Requests by Path (all)",
       "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
-          "expr": "sum by (path) (count_over_time(({container=~\".*app.*\"} | json | msg=\"http_request\")[1m]))",
+          "expr": "sum by (path) (count_over_time(({app=\"stock-market\", container=~\".*app.*\"} | json | __error__=\"\" | msg=\"http_request\")[1m]))",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
@@ -67,7 +81,7 @@
       "datasource": { "type": "loki", "name": "Loki", "uid": "stock-market-loki" },
       "targets": [
         {
-          "expr": "{container=~\".*app.*\"} | json | msg=\"http_request\"",
+          "expr": "{app=\"stock-market\", container=~\".*app.*\"} | json | __error__=\"\" | msg=\"http_request\"",
           "refId": "A"
         }
       ],

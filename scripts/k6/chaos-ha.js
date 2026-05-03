@@ -4,26 +4,23 @@ import { check, sleep } from "k6";
 export const options = {
   scenarios: {
     steady_load: {
-      executor: "constant-arrival-rate",
-      rate: 500,
-      timeUnit: "1s",
-      duration: "20s",
-      preAllocatedVUs: 100,
-      maxVUs: 600,
-      gracefulStop: "0s",
-      maxDuration: "25s"
+      executor: "shared-iterations",
+      iterations: 10000,
+      vus: 200,
+      maxDuration: "30s",
+      gracefulStop: "0s"
     },
     kill_app: {
       executor: "per-vu-iterations",
       vus: 1,
       iterations: 1,
-      startTime: "10s",
+      startTime: "2s",
       exec: "kill_app",
     }
   }
 };
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
+const BASE_URL = __ENV.BASE_URL || "http://nginx:8080";
 const STOCK = __ENV.STOCK || "stock1";
 
 export function setup() {
@@ -40,6 +37,14 @@ export function teardown() {
 
 export function kill_app() {
   http.post(`${BASE_URL}/chaos`, null);
+
+  let ok = false;
+  for (let i = 0; i < 30; i++) {
+    const r = http.get(`${BASE_URL}/stocks`);
+    if (r.status === 200) { ok = true; break; }
+    sleep(1);
+  }
+  check({ ok }, { "recovered": (v) => v.ok === true });
 }
 
 export default function () {
