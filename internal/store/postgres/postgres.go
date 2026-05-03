@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"stock-market/internal/domain"
 	"stock-market/internal/store"
@@ -47,6 +48,7 @@ func (s *PostgresStore) Close() {
 	s.pool.Close()
 }
 
+// Migrate loads the initial schema from 001_init.sql and applies it.
 func (s *PostgresStore) Migrate(ctx context.Context, migrationsDir string) error {
 	if migrationsDir == "" {
 		migrationsDir = "migrations"
@@ -110,7 +112,8 @@ func (s *PostgresStore) TradeOne(ctx context.Context, walletID, stockName, trade
 	if tradeType != "buy" && tradeType != "sell" {
 		return store.ErrInvalidTradeType
 	}
-
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
 	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		var stockExists bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM stocks WHERE name=$1)`, stockName).Scan(&stockExists); err != nil {
@@ -120,41 +123,64 @@ func (s *PostgresStore) TradeOne(ctx context.Context, walletID, stockName, trade
 			return store.ErrStockNotFound
 		}
 
-		if _, err := tx.Exec(ctx, `INSERT INTO wallets(id) VALUES ($1) ON CONFLICT DO NOTHING`, walletID); err != nil {
-			return err
-		}
-
 		switch tradeType {
 		case "buy":
-			cmd, err := tx.Exec(ctx, `UPDATE stocks SET quantity = quantity - 1 WHERE name=$1 AND quantity > 0`, stockName)
+			var ok bool
+			err := tx.QueryRow(ctx, `
+        WITH stock AS (
+            UPDATE stocks
+            SET quantity = quantity - 1
+            WHERE name = $1 AND quantity > 0
+            RETURNING 1
+        ),
+        wallet AS (
+            INSERT INTO wallets(id) VALUES ($2)
+            ON CONFLICT DO NOTHING
+            RETURNING 1
+        ),
+        upsert_wallet AS (
+            INSERT INTO wallet_stocks(wallet_id, stock_name, quantity)
+            SELECT $2, $1, 1
+            WHERE EXISTS (SELECT 1 FROM stock)
+            ON CONFLICT (wallet_id, stock_name)
+            DO UPDATE SET quantity = wallet_stocks.quantity + 1
+            RETURNING 1
+        )
+        SELECT EXISTS (SELECT 1 FROM stock) AS stock_ok;
+    `, stockName, walletID).Scan(&ok)
 			if err != nil {
 				return err
 			}
-			if cmd.RowsAffected() == 0 {
+			if !ok {
 				return store.ErrBankOutOfStock
 			}
 
-			if _, err := tx.Exec(ctx, `INSERT INTO wallet_stocks(wallet_id, stock_name, quantity)
-                VALUES ($1,$2,1)
-                ON CONFLICT (wallet_id, stock_name) DO UPDATE SET quantity = wallet_stocks.quantity + 1`, walletID, stockName); err != nil {
-				return err
-			}
-
 		case "sell":
-			cmd, err := tx.Exec(ctx, `UPDATE wallet_stocks SET quantity = quantity - 1
-                WHERE wallet_id=$1 AND stock_name=$2 AND quantity > 0`, walletID, stockName)
+			var ok bool
+			err := tx.QueryRow(ctx, `
+        WITH wallet_update AS (
+            UPDATE wallet_stocks
+            SET quantity = quantity - 1
+            WHERE wallet_id = $1 AND stock_name = $2 AND quantity > 0
+            RETURNING quantity
+        ),
+        stock_update AS (
+            UPDATE stocks
+            SET quantity = quantity + 1
+            WHERE name = $2 AND EXISTS (SELECT 1 FROM wallet_update)
+            RETURNING 1
+        ),
+        cleanup AS (
+            DELETE FROM wallet_stocks
+            WHERE wallet_id = $1 AND stock_name = $2 AND quantity = 0
+        )
+        SELECT EXISTS (SELECT 1 FROM wallet_update) AS wallet_ok;
+    `, walletID, stockName).Scan(&ok)
 			if err != nil {
 				return err
 			}
-			if cmd.RowsAffected() == 0 {
+			if !ok {
 				return store.ErrWalletOutOfStock
-			}
-
-			if _, err := tx.Exec(ctx, `UPDATE stocks SET quantity = quantity + 1 WHERE name=$1`, stockName); err != nil {
-				return err
-			}
-			if _, err := tx.Exec(ctx, `DELETE FROM wallet_stocks WHERE wallet_id=$1 AND stock_name=$2 AND quantity=0`, walletID, stockName); err != nil {
-				return err
 			}
 		}
 
