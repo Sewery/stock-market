@@ -21,7 +21,9 @@ run_k6() {
 
 run_k6 read-heavy.js
 run_k6 write-heavy.js
+run_k6 mixed.js
 run_k6 chaos-ha.js
+run_k6 fanout-buy.js
 run_k6 hot-wallet.js
 
 echo "All k6 tests finished."

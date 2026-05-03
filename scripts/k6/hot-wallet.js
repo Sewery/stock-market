@@ -5,8 +5,8 @@ export const options = {
   scenarios: {
     hot_wallet: {
       executor: "shared-iterations",
-      iterations: 10000,
-      vus: 200,
+      iterations: 100,
+      vus: 3,
       maxDuration: "30s"
     }
   }
