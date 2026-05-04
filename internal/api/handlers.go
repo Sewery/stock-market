@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"stock-market/internal/domain"
@@ -67,22 +68,27 @@ func (h *Handlers) TradeOne(c *gin.Context) {
 
 	case errors.Is(err, store.ErrStockNotFound):
 		tradeErrorsTotal.WithLabelValues("stock_not_found").Inc()
+		slog.Warn("trade_failed", "reason", "stock_not_found", "wallet_id", walletID, "stock", stockName)
 		c.JSON(http.StatusNotFound, gin.H{"error": "stock not found"})
 
 	case errors.Is(err, store.ErrBankOutOfStock):
 		tradeErrorsTotal.WithLabelValues("bank_out_of_stock").Inc()
+		slog.Warn("trade_failed", "reason", "bank_out_of_stock", "wallet_id", walletID, "stock", stockName)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "bank out of stock"})
 
 	case errors.Is(err, store.ErrWalletOutOfStock):
 		tradeErrorsTotal.WithLabelValues("wallet_out_of_stock").Inc()
+		slog.Warn("trade_failed", "reason", "wallet_out_of_stock", "wallet_id", walletID, "stock", stockName)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "wallet out of stock"})
 
 	case errors.Is(err, store.ErrInvalidTradeType):
 		tradeErrorsTotal.WithLabelValues("invalid_type").Inc()
+		slog.Warn("trade_failed", "reason", "invalid_type", "wallet_id", walletID, "stock", stockName)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "type must be 'buy' or 'sell'"})
 
 	default:
 		tradeErrorsTotal.WithLabelValues("internal").Inc()
+		slog.Error("trade_failed", "reason", "internal", "wallet_id", walletID, "stock", stockName, "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 	}
 }
@@ -97,9 +103,11 @@ func (h *Handlers) GetWallet(c *gin.Context) {
 	}
 	if errors.Is(err, store.ErrWalletNotFound) {
 		walletQueriesTotal.WithLabelValues("not_found").Inc()
+		slog.Warn("wallet_not_found", "wallet_id", walletID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "wallet not found"})
 		return
 	}
+	slog.Error("wallet_query_failed", "wallet_id", walletID, "err", err)
 	walletQueriesTotal.WithLabelValues("error").Inc()
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 }
@@ -112,11 +120,17 @@ func (h *Handlers) GetWalletStockQty(c *gin.Context) {
 	switch {
 	case err == nil:
 		c.String(http.StatusOK, "%d", qty)
+
 	case errors.Is(err, store.ErrStockNotFound):
+		slog.Warn("stock_not_found", "stock", stockName)
 		c.JSON(http.StatusNotFound, gin.H{"error": "stock not found"})
+
 	case errors.Is(err, store.ErrWalletNotFound):
+		slog.Warn("wallet_not_found", "wallet_id", walletID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "wallet not found"})
+
 	default:
+		slog.Error("wallet_stock_qty_failed", "wallet_id", walletID, "stock", stockName, "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 	}
 }
@@ -124,6 +138,7 @@ func (h *Handlers) GetWalletStockQty(c *gin.Context) {
 func (h *Handlers) GetBankStocks(c *gin.Context) {
 	stocks, err := h.Store.GetBankStocks(c.Request.Context())
 	if err != nil {
+		slog.Error("bank_get_failed", "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
@@ -137,7 +152,7 @@ func (h *Handlers) SetBankStocks(c *gin.Context) {
 		return
 	}
 	if err := h.Store.SetBankStocks(c.Request.Context(), req.Stocks); err != nil {
-		// validation errors should be 400; store implementations return plain errors
+		slog.Warn("bank_set_failed", "err", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -148,6 +163,7 @@ func (h *Handlers) SetBankStocks(c *gin.Context) {
 func (h *Handlers) GetAuditLog(c *gin.Context) {
 	log, err := h.Store.GetAuditLog(c.Request.Context())
 	if err != nil {
+		slog.Error("audit_log_failed", "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
