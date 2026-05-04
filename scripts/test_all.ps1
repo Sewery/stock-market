@@ -8,9 +8,9 @@ Write-Host "== go test =="
 go test ./...
 
 Write-Host "== E2E curl =="
-bash ./scripts/test_endpoints.sh $BaseUrl
+./scripts/test_endpoints.ps1 -BaseUrl $BaseUrl
 
 Write-Host "== k6 load =="
-bash ./scripts/k6/run.sh
+./scripts/k6/run.ps1
 
 Write-Host "All tests OK"
