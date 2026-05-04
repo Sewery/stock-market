@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"stock-market/internal/domain"
@@ -48,18 +49,38 @@ func (s *PostgresStore) Close() {
 	s.pool.Close()
 }
 
-// Migrate loads the initial schema from 001_init.sql and applies it.
+// // Migrate loads all *.sql files from the migrations directory (sorted by name)
+// and applies them to the database.
 func (s *PostgresStore) Migrate(ctx context.Context, migrationsDir string) error {
 	if migrationsDir == "" {
 		migrationsDir = "migrations"
 	}
-	path := filepath.Join(migrationsDir, "001_init.sql")
-	b, err := os.ReadFile(path)
+
+	entries, err := os.ReadDir(migrationsDir)
 	if err != nil {
-		return fmt.Errorf("read migration %s: %w", path, err)
+		return fmt.Errorf("read migrations dir %s: %w", migrationsDir, err)
 	}
-	if _, err := s.pool.Exec(ctx, string(b)); err != nil {
-		return fmt.Errorf("apply migration: %w", err)
+
+	var files []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if filepath.Ext(e.Name()) != ".sql" {
+			continue
+		}
+		files = append(files, filepath.Join(migrationsDir, e.Name()))
+	}
+	sort.Strings(files)
+
+	for _, path := range files {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read migration %s: %w", path, err)
+		}
+		if _, err := s.pool.Exec(ctx, string(b)); err != nil {
+			return fmt.Errorf("apply migration %s: %w", path, err)
+		}
 	}
 	return nil
 }
