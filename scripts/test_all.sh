@@ -3,6 +3,8 @@ set -euo pipefail
 
 PORT="${1:-8080}"
 BASE_URL="http://localhost:${PORT}"
+DATABASE_URL="${DATABASE_URL:-postgres://stock:stock@localhost:5432/stock_market?sslmode=disable}"
+export DATABASE_URL
 
 echo "== go test =="
 go test ./...
@@ -11,6 +13,6 @@ echo "== E2E curl =="
 ./scripts/test_endpoints.sh "$BASE_URL"
 
 echo "== k6 load =="
-./scripts/k6/run.sh
+./scripts/k6/run.sh "$BASE_URL"
 
 echo "All tests OK"
