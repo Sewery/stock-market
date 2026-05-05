@@ -13,6 +13,6 @@ echo "== E2E curl =="
 ./scripts/test_endpoints.sh "$BASE_URL"
 
 echo "== k6 load =="
-./scripts/k6/run.sh "$BASE_URL"
+./scripts/k6/run.sh
 
 echo "All tests OK"

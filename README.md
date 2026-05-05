@@ -13,6 +13,7 @@ The service consists of three core entities:
 - Buy/sell operations are always executed immediately at face value
 - The Bank acts as the sole liquidity provider
 - Initially there are no wallets and bank account is empty
+
 ### Endpoints
 - `POST /wallets/{wallet_id}/stocks/{stock_name}`
     - buy or sell a single stock for a wallet
@@ -107,17 +108,19 @@ Scenarios:
 - **write-heavy**: creates many wallets and executes buy operations
 - **mixed**: realistic mix of reads and writes
 - **fanout-buy**: many wallets buy the same stock with random sizes
-- **hot-wallet**: worst-case contention on a few wallets and stocks; failures are expected
+- **hot-wallet**: worst-case contention — 3 virtual users make operations a single wallet and stock concurrently; Postgres deadlocks (`SQLSTATE 40P01`) and `wallet_out_of_stock` rejections are expected and do not indicate a bug
 - **chaos-ha**: steady load while killing one instance to verify HA and recovery
+
+Requires Docker Compose to be running — k6 runs inside Docker and connects to nginx directly over the internal network.
 
 Linux/macOS:
 ```bash
-bash ./scripts/k6/run.sh 8085
+bash ./scripts/k6/run.sh
 ```
 
 Windows (PowerShell):
 ```powershell
-./scripts/k6/run.ps1 -Port 8085
+./scripts/k6/run.ps1
 ```
 
 ### Full test suite
@@ -149,8 +152,8 @@ Windows (PowerShell):
 ## Architecture
 
 ### Data flow
-Nginx receives traffic on a single host port, distributes requests to app1/app2, and the app uses either the in-memory store or Postgres.  
-The in-memory store is a lightweight fallback used when `DATABASE_URL` is not set, useful for fast local runs and tests without Postgres.
+Nginx receives traffic on a single host port and distributes requests to app1/app2.  
+The app stores data in **PostgreSQL** when `DATABASE_URL` is set, or falls back to an **in-memory store** when it is not. The in-memory store requires no external dependencies and is suitable for local development and testing. PostgreSQL is recommended for any persistent or production-like deployment.
 
 ### Service ports
 | Service | Host port |
@@ -190,8 +193,8 @@ Logs are written to stdout and collected by Promtail, then shipped to Loki for v
 - Migrations are linear and simple.
 - No real autoscaling.
 - Grafana/Loki/Prometheus use ephemeral storage; data is lost on restart.
-- Hot-wallet is a worst-case contention test; failures are expected.
 - No caching by design to keep data consistent.
+- No automatic deadlock retry: when two app instances concurrently update the same wallet row, Postgres aborts one transaction with `SQLSTATE 40P01`. The request returns 500 and the caller must retry. This is intentional in the hot-wallet scenario and would require application-level retry logic to eliminate in production.
 
 ## Operations guide
 
@@ -216,12 +219,12 @@ To verify the system is healthy, check the `GET /healthz` endpoint on each app i
 Structured JSON logs are collected by Promtail and available in Grafana Loki.  
 Key log messages to search for:
 
-| Message | Meaning |
-|---|---|
-| `trade_failed` | Trade rejected; check `reason` field |
-| `wallet_not_found` | Read/trade on a non-existent wallet |
-| `bank_out_of_stock` | Buy attempted when bank has 0 stock |
-| `http_request` | Per-request access log with latency |
+| Message | Level | Meaning |
+|---|---|---|
+| `trade_failed` | `ERROR` | Trade aborted by Postgres (`reason: internal`); check `err` field for deadlock or timeout |
+| `trade_failed` | `WARN` | Trade rejected by business logic (`reason: wallet_out_of_stock`, `bank_out_of_stock`) |
+| `wallet_not_found` | `WARN` | Read or trade on a non-existent wallet |
+| `http_request` | `INFO` | Per-request access log with latency |
 
 ### First response
 1. Check `docker compose ps` — all services should be `healthy` or `running`.
@@ -248,7 +251,8 @@ Both scripts resolve the Postgres container automatically via `docker compose ps
 ### Known failure modes
 | Mode | Symptom | Action |
 |---|---|---|
-| Hot-wallet contention | High `bank_out_of_stock` / `wallet_out_of_stock` errors | Expected; not a bug |
+| Hot-wallet deadlock | `trade_failed` ERROR with `"err":"ERROR: deadlock detected (SQLSTATE 40P01)"` in logs; trades return 500 | Expected under high concurrency on the same wallet; no data corruption — the transaction is rolled back cleanly |
+| Hot-wallet out of stock | `trade_failed` WARN with `reason: wallet_out_of_stock`; trades return 400 | Expected business rejection; not a bug |
 | Postgres down | All trades return 500 | Restart postgres, check logs |
 | Nginx timeout | 504 from nginx, high p95 | Check DB query times, restart slow instance |
 | Promtail label error | No logs in Loki | Check `docker compose logs promtail` |
